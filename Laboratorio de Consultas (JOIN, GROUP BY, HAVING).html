@@ -1,0 +1,531 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Laboratorio de Consultas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+[hidden]{display:none!important}
+/* Layout: banco de trabajo tipo IDE — cabecera con progreso, pestañas por modo, ejercicio a la izquierda y guía rápida fija a la derecha */
+:root{
+  --bg:#eef2f4; --surface:#ffffff; --ink:#16212b; --muted:#5b6874; --line:#d4dce2;
+  --accent:#0d6b67; --accent-soft:#d8eeec; --accent-ink:#ffffff;
+  --warm:#b8680f; --warm-soft:#fbecd8;
+  --ok:#1d7a3b; --ok-soft:#dcf1e2; --bad:#b0281f; --bad-soft:#f9e0dd;
+  --code-bg:#fbfcfd; --code-gutter:#8a96a1;
+  --syn-kw:#7f0055; --syn-str:#2a00ff; --syn-num:#125ea8; --syn-com:#3f7f5f; --syn-fn:#0d6b67;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"JetBrains Mono", Consolas, "Courier New", monospace;
+  --r:10px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10171d; --surface:#172129; --ink:#e4ebf0; --muted:#97a5b1; --line:#2b3843;
+  --accent:#4fc2b9; --accent-soft:#183a3a; --accent-ink:#0b1a1a;
+  --warm:#f0a94a; --warm-soft:#3a2b17;
+  --ok:#6fd38f; --ok-soft:#173523; --bad:#ff8a80; --bad-soft:#3d1c1a;
+  --code-bg:#0f161c; --code-gutter:#5d6b77;
+  --syn-kw:#e48bbd; --syn-str:#a9bcff; --syn-num:#7cc0ff; --syn-com:#7fae8f; --syn-fn:#4fc2b9;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#10171d; --surface:#172129; --ink:#e4ebf0; --muted:#97a5b1; --line:#2b3843;
+  --accent:#4fc2b9; --accent-soft:#183a3a; --accent-ink:#0b1a1a;
+  --warm:#f0a94a; --warm-soft:#3a2b17;
+  --ok:#6fd38f; --ok-soft:#173523; --bad:#ff8a80; --bad-soft:#3d1c1a;
+  --code-bg:#0f161c; --code-gutter:#5d6b77;
+  --syn-kw:#e48bbd; --syn-str:#a9bcff; --syn-num:#7cc0ff; --syn-com:#7fae8f; --syn-fn:#4fc2b9;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 48px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px}
+.brand{display:flex;flex-direction:column;gap:2px;min-width:0}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+h1{font-family:var(--f-display);font-weight:800;font-size:clamp(28px,4.4vw,42px);line-height:1.05;margin:0;text-wrap:balance}
+h1 code{font-family:var(--f-mono);font-weight:600;color:var(--accent);font-size:.5em;vertical-align:.3em;margin-left:.2em}
+.total{font-family:var(--f-mono);font-size:14px;color:var(--muted);display:flex;align-items:center;gap:10px}
+.bar{width:160px;height:8px;border-radius:99px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);width:0;transition:width .4s}
+.tabs{display:flex;flex-wrap:wrap;gap:8px}
+.tab{font:inherit;font-weight:700;font-size:15px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);
+  padding:8px 14px;border-radius:99px;cursor:pointer;display:flex;align-items:center;gap:8px}
+.tab .n{font-family:var(--f-mono);font-weight:400;font-size:12px;color:var(--muted)}
+.tab[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.tab[aria-selected="true"] .n{color:var(--accent-ink);opacity:.85}
+.tab:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(--warm);outline-offset:2px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px;min-width:0}
+.ex-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px}
+.ex-num{font-family:var(--f-mono);font-size:13px;color:var(--muted)}
+h2{font-family:var(--f-display);font-weight:600;font-size:22px;margin:0;text-wrap:balance}
+.consigna{color:var(--muted);margin:4px 0 14px;max-width:65ch}
+.pregunta{font-weight:700;margin:14px 0 0}
+.dots{display:flex;flex-wrap:wrap;gap:6px}
+.dot{width:26px;height:26px;border-radius:6px;border:1.5px solid var(--line);background:var(--surface);color:var(--muted);
+  font:600 12px var(--f-mono);cursor:pointer;display:grid;place-items:center;padding:0}
+.dot.cur{border-color:var(--accent);color:var(--accent)}
+.dot.done{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+pre.code{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:14px 0;overflow-x:auto;
+  font-family:var(--f-mono);font-size:14px;line-height:1.7;tab-size:4}
+.ln{display:block;padding:0 16px 0 0;white-space:pre}
+.ln::before{content:attr(data-n);display:inline-block;width:3em;padding-right:1em;text-align:right;color:var(--code-gutter);user-select:none}
+.k{color:var(--syn-kw);font-weight:600}.s{color:var(--syn-str)}.nm{color:var(--syn-num)}.c{color:var(--syn-com);font-style:italic}.fn{color:var(--syn-fn);font-weight:600}
+.blank{font:600 14px var(--f-mono);padding:1px 6px;border:1.5px dashed var(--warm);border-radius:5px;background:var(--warm-soft);color:var(--ink);text-align:center}
+.blank.ok{border-style:solid;border-color:var(--ok);background:var(--ok-soft)}
+.blank.no{border-style:solid;border-color:var(--bad);background:var(--bad-soft)}
+/* tablas de datos */
+.minis{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:14px}
+.mini{min-width:0;max-width:100%;overflow-x:auto}
+.mini-h{font:600 12px var(--f-mono);color:var(--accent);margin-bottom:4px}
+.mini table{border-collapse:collapse;font:13px var(--f-mono)}
+.mini th,.mini td{border:1px solid var(--line);padding:3px 8px;text-align:left;white-space:nowrap}
+.mini th{background:var(--bg);color:var(--muted);font-weight:600}
+.mini td{background:var(--code-bg)}
+.console{margin-top:10px;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.console-h{font:12px var(--f-mono);letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding:6px 12px;border-bottom:1px solid var(--line);background:var(--bg)}
+.console input{width:100%;border:0;background:var(--code-bg);color:var(--ink);font:15px var(--f-mono);padding:12px}
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;align-items:center}
+.btn{font:700 15px var(--f-body);padding:9px 16px;border-radius:8px;border:1.5px solid var(--accent);background:var(--accent);color:var(--accent-ink);cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn.plain{background:transparent;border-color:var(--line);color:var(--muted)}
+.btn:disabled{opacity:.45;cursor:default}
+.spacer{flex:1}
+.fb{margin-top:14px;padding:12px 14px;border-radius:8px;border-left:4px solid var(--line);background:var(--bg)}
+.fb.ok{border-color:var(--ok);background:var(--ok-soft)}
+.fb.no{border-color:var(--bad);background:var(--bad-soft)}
+.fb.hint{border-color:var(--warm);background:var(--warm-soft)}
+.fb strong{display:block;margin-bottom:2px}
+.fb code,.guide code,.consigna code{font-family:var(--f-mono);font-size:.9em}
+/* modo error */
+.lines-pick .ln{cursor:pointer;border-left:3px solid transparent}
+.lines-pick .ln:hover{background:var(--warm-soft)}
+.lines-pick .ln.no{background:var(--bad-soft);border-color:var(--bad)}
+.lines-pick .ln.ok{background:var(--ok-soft);border-color:var(--ok)}
+.lines-pick .ln:focus-visible{outline:2px solid var(--warm);outline-offset:-2px}
+/* modo armar */
+.parsons{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+@media (max-width:640px){.parsons{grid-template-columns:minmax(0,1fr)}}
+.zone-h{font:12px var(--f-mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:6px}
+.zone{min-height:120px;border:1.5px dashed var(--line);border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:6px;background:var(--code-bg);overflow-x:auto}
+.tile{font:14px var(--f-mono);text-align:left;white-space:pre;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:6px;padding:6px 10px;cursor:pointer}
+.tile:hover{border-color:var(--accent)}
+.zone.sol .tile{border-left:3px solid var(--accent)}
+.empty{font-size:14px;color:var(--muted);padding:8px}
+/* guía */
+.guide h3{font-family:var(--f-display);font-weight:600;font-size:18px;margin:0 0 10px}
+.guide p{margin:0 0 10px;font-size:15px}
+.anat{font:14px var(--f-mono);display:flex;flex-direction:column;gap:4px;margin:6px 0 14px;line-height:1.4}
+.anat span{display:flex;align-items:baseline;gap:8px}
+.anat b{font-weight:600;padding:2px 6px;border-radius:4px;min-width:9.5ch}
+.anat small{font:13px var(--f-body);color:var(--muted)}
+.p1 b{background:var(--line)}.p2 b{background:var(--warm-soft);color:var(--warm)}.p3 b{background:var(--accent-soft);color:var(--accent)}.p4 b{background:var(--ok-soft);color:var(--ok)}
+.guide dl{margin:0;display:grid;gap:10px;font-size:15px}
+.guide dt{font-weight:700}
+.guide dd{margin:0;color:var(--muted)}
+.guide hr{border:0;border-top:1px solid var(--line);margin:14px 0}
+.reset{font:13px var(--f-body);background:none;border:0;color:var(--muted);text-decoration:underline;cursor:pointer;padding:0}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.shake{animation:shake .25s 2}
+@media (prefers-reduced-motion:reduce){.shake{animation:none}.bar i{transition:none}}
+</style></head><body>
+
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <span class="eyebrow">Bases de Datos · SQL (CET3)</span>
+      <h1>Laboratorio de Consultas <code>GROUP BY</code></h1>
+    </div>
+    <div class="total"><span id="totTxt">0 / 0 resueltos</span><div class="bar"><i id="totBar"></i></div></div>
+  </header>
+
+  <nav class="tabs" role="tablist" id="tabs"></nav>
+
+  <div class="grid">
+    <main class="card" id="stage" aria-live="polite"></main>
+
+    <aside class="card guide">
+      <h3>Anatomía de una consulta</h3>
+      <div class="anat">
+        <span class="p1"><b>SELECT</b><small>columnas y funciones</small></span>
+        <span class="p1"><b>FROM</b><small>primera tabla</small></span>
+        <span class="p3"><b>INNER JOIN</b><small>segunda tabla … ON condición</small></span>
+        <span class="p2"><b>WHERE</b><small>filtra filas</small></span>
+        <span class="p4"><b>GROUP BY</b><small>arma los grupos</small></span>
+        <span class="p2"><b>HAVING</b><small>filtra grupos</small></span>
+        <span class="p1"><b>ORDER BY</b><small>ordena el resultado</small></span>
+      </div>
+      <dl>
+        <div><dt><code>INNER JOIN … ON</code></dt><dd>Combina las filas de dos tablas que cumplen la condición. Una fila sin pareja en la otra tabla no aparece: <code>ON p.cod_mat = a.cod</code>.</dd></div>
+        <div><dt><code>GROUP BY</code></dt><dd>Junta en un grupo las filas con el mismo valor. Las funciones <code>COUNT</code>, <code>AVG</code>, <code>MIN</code>, <code>MAX</code> y <code>SUM</code> calculan un resultado por grupo.</dd></div>
+        <div><dt>Regla clave</dt><dd>Toda columna del SELECT que no esté dentro de una función debe aparecer en el GROUP BY.</dd></div>
+        <div><dt><code>WHERE</code> y <code>HAVING</code></dt><dd>WHERE filtra filas antes de agrupar y no admite funciones de agregación. HAVING filtra grupos después de agrupar: <code>HAVING COUNT(*) &gt; 3</code>.</dd></div>
+      </dl>
+      <hr>
+      <p style="font-size:14px;color:var(--muted)">Las consultas usan la base <code>utu_LP</code>. En «Predecir el resultado» se trabaja con una muestra pequeña de los datos.</p>
+      <button class="reset" id="resetBtn" type="button">Reiniciar progreso</button>
+      <span id="resetConfirm" hidden style="font-size:13px"> ¿Seguro? <button class="reset" id="resetYes" type="button">Sí, borrar</button> · <button class="reset" id="resetNo" type="button">Cancelar</button></span>
+    </aside>
+  </div>
+</div>
+
+<script>
+/* ---------- datos de muestra para «Predecir» ---------- */
+const MINI = {
+  PROFESOR: {cols:["id_prof","nombre1","apellido1","año_ing","cod_mat"], rows:[
+    ["1","LUIS","UMPIERREZ","2010","1"],
+    ["2","ANDREA","LARGHERO","2005","2"],
+    ["3","LAURA","MAGARIÑOS","2006","1"],
+    ["4","JOSE","TRIGO","2004","5"],
+    ["5","CHRISTIAN","HUGO","2012","2"],
+    ["6","MARIA","FIGUEROA","2012","1"]]},
+  ASIGNATURA: {cols:["cod","curso","nombre_asig"], rows:[
+    ["1","EMT","Programación I"],
+    ["2","EMT","Base de Datos"],
+    ["5","FPB","Gastronomía"],
+    ["8","EMT","Programación II"]]}
+};
+
+const DATA = {
+  predecir: [
+    {t:"Filas de un JOIN", tb:["PROFESOR","ASIGNATURA"], q:"¿Cuántas filas devuelve la consulta?", code:
+`SELECT p.apellido1, a.nombre_asig
+FROM PROFESOR p
+INNER JOIN ASIGNATURA a ON p.cod_mat = a.cod;`, a:[6], hint:"Buscar, para cada profesor, la asignatura cuyo cod coincide con su cod_mat.", ex:"Los 6 profesores tienen un cod_mat que existe en ASIGNATURA, así que cada uno aparece una vez: 6 filas."},
+    {t:"JOIN con WHERE", tb:["PROFESOR","ASIGNATURA"], q:"¿Cuántas filas devuelve la consulta?", code:
+`SELECT p.nombre1, p.apellido1
+FROM PROFESOR p
+INNER JOIN ASIGNATURA a ON p.cod_mat = a.cod
+WHERE a.nombre_asig = 'Base de Datos';`, a:[2], hint:"Base de Datos tiene cod 2. ¿Qué profesores tienen cod_mat 2?", ex:"Solo LARGHERO y HUGO tienen cod_mat 2: 2 filas."},
+    {t:"Contar por grupo", tb:["PROFESOR","ASIGNATURA"], q:"¿Qué valor muestra la columna cantidad en la fila de Programación I?", code:
+`SELECT a.nombre_asig, COUNT(*) AS cantidad
+FROM PROFESOR p
+INNER JOIN ASIGNATURA a ON p.cod_mat = a.cod
+GROUP BY a.nombre_asig;`, a:[3], hint:"Contar los profesores con cod_mat 1.", ex:"UMPIERREZ, MAGARIÑOS y FIGUEROA tienen cod_mat 1. El grupo de Programación I tiene 3 filas."},
+    {t:"¿Cuántos grupos?", tb:["PROFESOR","ASIGNATURA"], q:"¿Cuántas filas devuelve la consulta?", code:
+`SELECT a.nombre_asig, COUNT(*) AS cantidad
+FROM PROFESOR p
+INNER JOIN ASIGNATURA a ON p.cod_mat = a.cod
+GROUP BY a.nombre_asig;`, a:[3], hint:"Hay 4 asignaturas, pero ¿todas tienen algún profesor?", ex:"Se forman grupos para Programación I, Base de Datos y Gastronomía. Programación II no tiene profesores: el INNER JOIN la deja afuera. Son 3 filas."},
+    {t:"Agrupar por curso", tb:["PROFESOR","ASIGNATURA"], q:"¿Qué valor muestra la columna cantidad en la fila de EMT?", code:
+`SELECT a.curso, COUNT(*) AS cantidad
+FROM PROFESOR p
+INNER JOIN ASIGNATURA a ON p.cod_mat = a.cod
+GROUP BY a.curso;`, a:[5], hint:"Sumar los profesores de todas las asignaturas de EMT.", ex:"Programación I tiene 3 profesores y Base de Datos 2. Las dos son de EMT: 3 + 2 = 5."},
+    {t:"El más antiguo", tb:["PROFESOR","ASIGNATURA"], q:"¿Qué valor muestra la columna desde en la fila de Base de Datos?", code:
+`SELECT a.nombre_asig, MIN(p.año_ing) AS desde
+FROM PROFESOR p
+INNER JOIN ASIGNATURA a ON p.cod_mat = a.cod
+GROUP BY a.nombre_asig;`, a:[2005], hint:"Mirar los años de ingreso de los profesores con cod_mat 2.", ex:"En Base de Datos están LARGHERO (2005) y HUGO (2012). MIN devuelve el menor: 2005."},
+    {t:"Filtrar grupos", tb:["PROFESOR","ASIGNATURA"], q:"¿Cuántas filas devuelve la consulta?", code:
+`SELECT a.nombre_asig, COUNT(*) AS cantidad
+FROM PROFESOR p
+INNER JOIN ASIGNATURA a ON p.cod_mat = a.cod
+GROUP BY a.nombre_asig
+HAVING COUNT(*) >= 2;`, a:[2], hint:"Primero contar cada grupo; después quedarse con los que tienen 2 o más.", ex:"Los grupos son Programación I (3), Base de Datos (2) y Gastronomía (1). HAVING deja los dos primeros: 2 filas."},
+    {t:"WHERE y HAVING juntos", tb:["PROFESOR","ASIGNATURA"], q:"¿Cuántas filas devuelve la consulta?", code:
+`SELECT a.nombre_asig, COUNT(*) AS cantidad
+FROM PROFESOR p
+INNER JOIN ASIGNATURA a ON p.cod_mat = a.cod
+WHERE p.año_ing >= 2010
+GROUP BY a.nombre_asig
+HAVING COUNT(*) >= 2;`, a:[1], hint:"El WHERE actúa primero: descartar a los que ingresaron antes de 2010.", ex:"Quedan UMPIERREZ y FIGUEROA (Programación I) y HUGO (Base de Datos). Solo Programación I llega a 2: 1 fila."},
+    {t:"Sin JOIN", tb:["ASIGNATURA"], q:"¿Qué número muestra la columna cantidad?", code:
+`SELECT curso, COUNT(*) AS cantidad
+FROM ASIGNATURA
+GROUP BY curso
+HAVING COUNT(*) > 1;`, a:[3], hint:"Contar las asignaturas de cada curso.", ex:"EMT tiene 3 asignaturas y FPB 1. Solo EMT cumple el HAVING, con cantidad 3."},
+    {t:"Promedio", tb:["PROFESOR","ASIGNATURA"], q:"¿Qué valor devuelve la consulta?", code:
+`SELECT AVG(p.año_ing) AS promedio
+FROM PROFESOR p
+INNER JOIN ASIGNATURA a ON p.cod_mat = a.cod
+WHERE a.nombre_asig = 'Base de Datos';`, a:[2008.5], hint:"Sumar los años de ingreso de los profesores de Base de Datos y dividir entre la cantidad.", ex:"(2005 + 2012) / 2 = 2008.5. MySQL lo muestra como 2008.5000."}
+  ],
+  completar: [
+    {t:"La condición del JOIN", q:"La consulta une cada profesor con la asignatura que dicta.", code:
+`SELECT p.apellido1, a.nombre_asig
+FROM PROFESOR p
+INNER JOIN ASIGNATURA a ⟦0⟧ p.cod_mat = a.cod;`, b:[["ON"]], hint:"Falta la palabra que introduce la condición de unión.", ex:"ON indica qué columnas deben coincidir para combinar las filas."},
+    {t:"La clave foránea", q:"La consulta une cada profesor con la asignatura que dicta.", code:
+`SELECT p.apellido1, a.nombre_asig
+FROM PROFESOR p
+INNER JOIN ASIGNATURA a ON p.⟦0⟧ = a.cod;`, b:[["cod_mat"]], hint:"¿Qué columna de PROFESOR guarda el código de la asignatura?", ex:"cod_mat es la clave foránea de PROFESOR que apunta a ASIGNATURA.cod."},
+    {t:"Agrupar", q:"La consulta cuenta cuántas asignaturas tiene cada curso.", code:
+`SELECT curso, COUNT(*) AS cantidad
+FROM ASIGNATURA
+⟦0⟧ curso;`, b:[["GROUP BY"]], hint:"Falta la cláusula que forma un grupo por cada curso.", ex:"GROUP BY curso junta las asignaturas del mismo curso, y COUNT(*) las cuenta."},
+    {t:"Función de agregación", q:"La consulta muestra el año de ingreso más antiguo de los profesores de cada asignatura.", code:
+`SELECT a.nombre_asig, ⟦0⟧(p.año_ing) AS desde
+FROM PROFESOR p
+INNER JOIN ASIGNATURA a ON p.cod_mat = a.cod
+GROUP BY a.nombre_asig;`, b:[["MIN"]], hint:"El año más antiguo es el valor más chico.", ex:"MIN devuelve el valor más chico de cada grupo."},
+    {t:"Promedio por barrio", q:"La consulta calcula el promedio de edad de los alumnos de cada barrio.", code:
+`SELECT barrio, ⟦0⟧(edad) AS promedio
+FROM ALUMNO
+GROUP BY ⟦1⟧;`, b:[["AVG"],["barrio"]], hint:"Una función calcula el promedio; la columna del GROUP BY es la que no está dentro de la función.", ex:"AVG calcula el promedio, y barrio va en el GROUP BY porque está en el SELECT sin función."},
+    {t:"Contar profesores", q:"La consulta cuenta los profesores de cada curso.", code:
+`SELECT a.curso, ⟦0⟧ AS cantidad
+FROM PROFESOR p
+INNER JOIN ASIGNATURA a ON p.cod_mat = a.cod
+GROUP BY a.curso;`, b:[["COUNT(*)","COUNT(p.id_prof)","COUNT(p.cedP)","COUNT(id_prof)"]], hint:"Contar las filas de cada grupo.", ex:"COUNT(*) cuenta las filas de cada grupo, es decir, los profesores de cada curso."},
+    {t:"Filtrar grupos", q:"La consulta muestra las asignaturas que tienen más de 3 profesores.", code:
+`SELECT a.nombre_asig, COUNT(*) AS cantidad
+FROM PROFESOR p
+INNER JOIN ASIGNATURA a ON p.cod_mat = a.cod
+GROUP BY a.nombre_asig
+⟦0⟧ COUNT(*) > 3;`, b:[["HAVING"]], hint:"La condición usa COUNT(*), así que filtra grupos.", ex:"HAVING filtra grupos después de agrupar y admite funciones de agregación."},
+    {t:"WHERE o HAVING", q:"Entre los profesores que ingresaron desde 2010, la consulta muestra las asignaturas que tienen al menos 3 de ellos.", code:
+`SELECT a.nombre_asig, COUNT(*) AS cantidad
+FROM PROFESOR p
+INNER JOIN ASIGNATURA a ON p.cod_mat = a.cod
+⟦0⟧ p.año_ing >= 2010
+GROUP BY a.nombre_asig
+⟦1⟧ COUNT(*) >= 3;`, b:[["WHERE"],["HAVING"]], hint:"Una condición es sobre cada profesor; la otra, sobre cada grupo.", ex:"WHERE descarta profesores antes de agrupar; HAVING descarta asignaturas después de contar."}
+  ],
+  error: [
+    {t:"Falta la condición", q:"La consulta se ejecuta, pero todas las asignaturas muestran 28 profesores. Hacer clic en la línea que provoca el problema.", lines:[
+"SELECT a.nombre_asig, COUNT(*) AS cantidad",
+"FROM PROFESOR p",
+"INNER JOIN ASIGNATURA a",
+"GROUP BY a.nombre_asig;"], bad:2, ex:"Falta ON p.cod_mat = a.cod. Sin condición, cada profesor se combina con todas las asignaturas (producto cartesiano) y cada grupo cuenta los 28 profesores."},
+    {t:"Función en el WHERE", q:"MySQL marca «Invalid use of group function». Hacer clic en la línea que provoca el error.", lines:[
+"SELECT a.nombre_asig, COUNT(*) AS cantidad",
+"FROM PROFESOR p",
+"INNER JOIN ASIGNATURA a ON p.cod_mat = a.cod",
+"WHERE COUNT(*) > 3",
+"GROUP BY a.nombre_asig;"], bad:3, ex:"WHERE no admite funciones de agregación. La condición sobre COUNT(*) va en un HAVING, después del GROUP BY."},
+    {t:"Columna sin agrupar", q:"MySQL marca un error de ONLY_FULL_GROUP_BY. Hacer clic en la línea que provoca el error.", lines:[
+"SELECT a.curso, a.nombre_asig, COUNT(*) AS cantidad",
+"FROM PROFESOR p",
+"INNER JOIN ASIGNATURA a ON p.cod_mat = a.cod",
+"GROUP BY a.curso;"], bad:0, ex:"a.nombre_asig está en el SELECT sin función de agregación y no figura en el GROUP BY. Se quita del SELECT o se agrega al GROUP BY."},
+    {t:"Columna inexistente", q:"MySQL marca «Unknown column». Hacer clic en la línea que provoca el error.", lines:[
+"SELECT p.apellido1, a.nombre_asig",
+"FROM PROFESOR p",
+"INNER JOIN ASIGNATURA a ON p.cod_mat = a.cod_mat;"], bad:2, ex:"ASIGNATURA no tiene una columna cod_mat: su clave primaria se llama cod. La condición correcta es p.cod_mat = a.cod."},
+    {t:"Columnas que no se corresponden", q:"La consulta se ejecuta, pero cada profesor aparece con una asignatura que no dicta. Hacer clic en la línea que provoca el problema.", lines:[
+"SELECT p.apellido1, a.nombre_asig",
+"FROM PROFESOR p",
+"INNER JOIN ASIGNATURA a ON p.id_prof = a.cod;"], bad:2, ex:"La condición compara el número de profesor con el código de asignatura. Hay que unir la clave foránea con la clave primaria: p.cod_mat = a.cod."},
+    {t:"Texto sin comillas", q:"MySQL marca «Unknown column 'FPB'». Hacer clic en la línea que provoca el error.", lines:[
+"SELECT p.apellido1, a.nombre_asig",
+"FROM PROFESOR p",
+"INNER JOIN ASIGNATURA a ON p.cod_mat = a.cod",
+"WHERE a.curso = FPB;"], bad:3, ex:"Sin comillas, MySQL interpreta FPB como el nombre de una columna. Los textos van entre comillas simples: a.curso = 'FPB'."}
+  ],
+  armar: [
+    {t:"Profesores y asignaturas", q:"Ordenar las líneas para mostrar cada profesor con su asignatura, ordenados por apellido. Sobra una línea.", sol:[[
+"SELECT p.apellido1, a.nombre_asig",
+"FROM PROFESOR p",
+"INNER JOIN ASIGNATURA a ON p.cod_mat = a.cod",
+"ORDER BY p.apellido1;"]], extra:["HAVING p.apellido1"], hint:"Primero se elige qué mostrar, después de dónde sale y al final cómo se ordena.", ex:"SELECT, FROM, INNER JOIN y ORDER BY, en ese orden. No hay grupos, así que HAVING no corresponde."},
+    {t:"Profesores por asignatura", q:"Ordenar las líneas para contar los profesores de cada asignatura. Sobra una línea.", sol:[[
+"SELECT a.nombre_asig, COUNT(*) AS cantidad",
+"FROM PROFESOR p",
+"INNER JOIN ASIGNATURA a ON p.cod_mat = a.cod",
+"GROUP BY a.nombre_asig;"]], extra:["WHERE COUNT(*) > 0"], hint:"WHERE no admite funciones de agregación.", ex:"El GROUP BY arma un grupo por asignatura y COUNT(*) los cuenta. La línea con WHERE COUNT(*) da error."},
+    {t:"Asignaturas con más profesores", q:"Ordenar las líneas para mostrar las asignaturas con más de 3 profesores, de mayor a menor. Sobra una línea.", sol:[[
+"SELECT a.nombre_asig, COUNT(*) AS cantidad",
+"FROM PROFESOR p",
+"INNER JOIN ASIGNATURA a ON p.cod_mat = a.cod",
+"GROUP BY a.nombre_asig",
+"HAVING COUNT(*) > 3",
+"ORDER BY cantidad DESC;"]], extra:["WHERE COUNT(*) > 3"], hint:"La condición sobre COUNT(*) va después de agrupar.", ex:"HAVING filtra los grupos ya contados y ORDER BY va siempre al final."},
+    {t:"Barrios con mayor edad", q:"Ordenar las líneas para mostrar los barrios cuyo promedio de edad es mayor a 18, sin contar a los alumnos sin barrio. Sobra una línea.", sol:[[
+"SELECT barrio, AVG(edad) AS promedio",
+"FROM ALUMNO",
+"WHERE barrio IS NOT NULL",
+"GROUP BY barrio",
+"HAVING AVG(edad) > 18;"]], extra:["WHERE AVG(edad) > 18"], hint:"Una condición es sobre cada alumno y la otra sobre cada barrio.", ex:"WHERE descarta a los alumnos sin barrio antes de agrupar; HAVING se queda con los barrios cuyo promedio supera 18."}
+  ]
+};
+const MODES = [
+  {id:"predecir", name:"Predecir el resultado", desc:"Leer la consulta, mirar los datos y responder la pregunta."},
+  {id:"completar", name:"Completar la consulta", desc:"Escribir lo que falta en cada espacio marcado."},
+  {id:"error", name:"Encontrar el error", desc:""},
+  {id:"armar", name:"Armar la consulta", desc:""}
+];
+
+/* ---------- estado ---------- */
+const KEY = "lab-consultas-groupby-v1";
+let solved = {predecir:{},completar:{},error:{},armar:{}};
+try{ const s = JSON.parse(localStorage.getItem(KEY)); if(s) for(const k in solved) solved[k] = s[k] || {}; }catch(e){}
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(solved)); }catch(e){} }
+let mode = "predecir", idx = {predecir:0,completar:0,error:0,armar:0};
+let parsonsState = null;
+
+/* ---------- resaltado SQL ---------- */
+const KW = new Set("SELECT FROM INNER LEFT RIGHT JOIN ON WHERE GROUP BY HAVING ORDER ASC DESC AS AND OR NOT NULL IS IN LIKE BETWEEN DISTINCT".split(" "));
+const FN = new Set("COUNT AVG MIN MAX SUM UPPER LOWER YEAR MONTH".split(" "));
+const esc = s => s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+function hl(src){
+  const re = /(--.*$)|('(?:[^'\\]|\\.)*')|([\p{L}_][\p{L}\d_]*)|(\d+(?:\.\d+)?)/gmu;
+  let out = "", last = 0, m;
+  while((m = re.exec(src))){
+    out += esc(src.slice(last, m.index));
+    if(m[1]) out += `<span class="c">${esc(m[1])}</span>`;
+    else if(m[2]) out += `<span class="s">${esc(m[2])}</span>`;
+    else if(m[3]){ const u = m[3].toUpperCase();
+      out += FN.has(u) ? `<span class="fn">${m[3]}</span>` : KW.has(u) ? `<span class="k">${m[3]}</span>` : m[3]; }
+    else if(m[4]) out += `<span class="nm">${m[4]}</span>`;
+    last = re.lastIndex;
+  }
+  return out + esc(src.slice(last));
+}
+const codeLines = src => src.split("\n").map((l,i)=>`<span class="ln" data-n="${i+1}">${hl(l)||" "}</span>`).join("");
+function miniTables(names){
+  return `<div class="minis">` + names.map(n=>{ const T = MINI[n];
+    return `<div class="mini"><div class="mini-h">${n}</div><table><thead><tr>${T.cols.map(c=>`<th>${c}</th>`).join("")}</tr></thead><tbody>${T.rows.map(r=>`<tr>${r.map(v=>`<td>${esc(v)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+  }).join("") + `</div>`;
+}
+
+/* ---------- interfaz ---------- */
+const $ = id => document.getElementById(id);
+function renderTabs(){
+  $("tabs").innerHTML = MODES.map(m=>{
+    const n = Object.keys(solved[m.id]).length, tot = DATA[m.id].length;
+    return `<button class="tab" role="tab" id="tab-${m.id}" aria-selected="${m.id===mode}" data-m="${m.id}">${m.name}<span class="n">${n}/${tot}</span></button>`;
+  }).join("");
+  let n=0,t=0; for(const m of MODES){ n+=Object.keys(solved[m.id]).length; t+=DATA[m.id].length; }
+  $("totTxt").textContent = `${n} / ${t} resueltos`;
+  $("totBar").style.width = (t? n/t*100 : 0) + "%";
+}
+$("tabs").addEventListener("click", e=>{ const b=e.target.closest(".tab"); if(!b) return; mode=b.dataset.m; parsonsState=null; render(); });
+
+function head(ex){
+  const list = DATA[mode], i = idx[mode];
+  const dots = list.map((_,j)=>`<button class="dot ${j===i?"cur":""} ${solved[mode][j]?"done":""}" data-j="${j}" aria-label="Ejercicio ${j+1}">${j+1}</button>`).join("");
+  return `<div class="ex-head"><span class="ex-num">${MODES.find(m=>m.id===mode).name} · ${i+1} de ${list.length}</span><div class="dots">${dots}</div></div>
+  <h2>${esc(ex.t)}</h2>`;
+}
+function nav(){
+  const i = idx[mode], last = DATA[mode].length-1;
+  return `<span class="spacer"></span><button class="btn plain" data-act="prev" ${i===0?"disabled":""}>← Anterior</button><button class="btn ghost" data-act="next" ${i===last?"disabled":""}>Siguiente →</button>`;
+}
+function fb(kind, title, body){ $("fb").className = "fb " + kind; $("fb").hidden = false; $("fb").innerHTML = `<strong>${title}</strong>${body}`; }
+function markSolved(){ solved[mode][idx[mode]] = true; save(); renderTabs(); document.querySelectorAll(".dot")[idx[mode]].classList.add("done"); }
+
+function render(){
+  renderTabs();
+  const ex = DATA[mode][idx[mode]], st = $("stage");
+  const desc = MODES.find(m=>m.id===mode).desc;
+  if(mode==="predecir"){
+    st.innerHTML = head(ex) + `<p class="consigna">${desc}</p>
+      ${miniTables(ex.tb)}
+      <pre class="code">${codeLines(ex.code)}</pre>
+      <p class="pregunta">${esc(ex.q)}</p>
+      <div class="console"><div class="console-h">Respuesta</div>
+      <input id="ans" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="Escribir un número…" aria-label="Respuesta"></div>
+      <div class="actions"><button class="btn" data-act="check">Comprobar</button><button class="btn plain" data-act="hint">Pista</button>${nav()}</div>
+      <div id="fb" hidden></div>`;
+  } else if(mode==="completar"){
+    const parts = ex.code.split(/⟦(\d)⟧/);
+    let html = "";
+    for(let p=0;p<parts.length;p++){
+      if(p%2===0) html += hl(parts[p]);
+      else { const w = Math.max(7, ...ex.b[+parts[p]].map(s=>s.length)) + 2;
+        html += `<input class="blank" style="width:${w}ch" data-b="${parts[p]}" autocomplete="off" spellcheck="false" aria-label="Espacio ${+parts[p]+1}">`; }
+    }
+    const lines = html.split("\n").map((l,i)=>`<span class="ln" data-n="${i+1}">${l||" "}</span>`).join("");
+    st.innerHTML = head(ex) + `<p class="consigna">${esc(ex.q)} ${desc}</p>
+      <pre class="code">${lines}</pre>
+      <div class="actions"><button class="btn" data-act="check">Comprobar</button><button class="btn plain" data-act="hint">Pista</button>${nav()}</div>
+      <div id="fb" hidden></div>`;
+  } else if(mode==="error"){
+    st.innerHTML = head(ex) + `<p class="consigna">${esc(ex.q)}</p>
+      <pre class="code lines-pick">${ex.lines.map((l,i)=>`<span class="ln" role="button" tabindex="0" data-n="${i+1}" data-i="${i}">${hl(l)||" "}</span>`).join("")}</pre>
+      <div class="actions"><button class="btn plain" data-act="reveal">Ver la respuesta</button>${nav()}</div>
+      <div id="fb" hidden></div>`;
+  } else {
+    if(!parsonsState){
+      const tiles = ex.sol[0].concat(ex.extra).map((txt,k)=>({k,txt}));
+      for(let a=tiles.length-1;a>0;a--){ const b=Math.floor(Math.random()*(a+1)); [tiles[a],tiles[b]]=[tiles[b],tiles[a]]; }
+      parsonsState = {pool:tiles, ans:[]};
+    }
+    st.innerHTML = head(ex) + `<p class="consigna">${esc(ex.q)} Hacer clic en una línea para moverla.</p>
+      <div class="parsons">
+        <div><div class="zone-h">Líneas disponibles</div><div class="zone" id="pool"></div></div>
+        <div><div class="zone-h">Consulta</div><div class="zone sol" id="sol"></div></div>
+      </div>
+      <div class="actions"><button class="btn" data-act="check">Comprobar</button><button class="btn plain" data-act="hint">Pista</button><button class="btn plain" data-act="shuffle">Empezar de nuevo</button>${nav()}</div>
+      <div id="fb" hidden></div>`;
+    drawParsons();
+  }
+}
+
+function drawParsons(){
+  const P = parsonsState;
+  $("pool").innerHTML = P.pool.length ? P.pool.map((x,j)=>`<button class="tile" data-pool="${j}">${hl(x.txt)}</button>`).join("") : `<div class="empty">No quedan líneas.</div>`;
+  $("sol").innerHTML = P.ans.length ? P.ans.map((x,j)=>`<button class="tile" data-ans="${j}">${hl(x.txt)}</button>`).join("") : `<div class="empty">Elegir la primera línea de la consulta.</div>`;
+}
+
+const sqlNorm = s => s.toUpperCase().replace(/\s+/g,"");
+const toNum = s => { const x = parseFloat(String(s).trim().replace(",", ".")); return isNaN(x) ? null : x; };
+$("stage").addEventListener("click", e=>{
+  const dot = e.target.closest(".dot");
+  if(dot){ idx[mode] = +dot.dataset.j; parsonsState=null; render(); return; }
+  const tp = e.target.closest("[data-pool]"), ta = e.target.closest("[data-ans]");
+  if(tp){ parsonsState.ans.push(parsonsState.pool.splice(+tp.dataset.pool,1)[0]); drawParsons(); return; }
+  if(ta){ parsonsState.pool.push(parsonsState.ans.splice(+ta.dataset.ans,1)[0]); drawParsons(); return; }
+  const line = e.target.closest(".lines-pick .ln");
+  if(line){ pickLine(line); return; }
+  const b = e.target.closest("[data-act]"); if(!b) return;
+  const ex = DATA[mode][idx[mode]], act = b.dataset.act;
+  if(act==="prev"||act==="next"){ idx[mode] += act==="next"?1:-1; parsonsState=null; render(); return; }
+  if(act==="hint"){ fb("hint","Pista", esc(ex.hint)); return; }
+  if(act==="shuffle"){ parsonsState=null; render(); return; }
+  if(act==="reveal"){ const ln=document.querySelectorAll(".lines-pick .ln")[ex.bad]; ln.classList.add("ok"); fb("hint",`El error está en la línea ${ex.bad+1}`, esc(ex.ex)); return; }
+  if(act==="check") check(ex);
+});
+$("stage").addEventListener("keydown", e=>{
+  if(e.key==="Enter" && e.target.id==="ans"){ check(DATA[mode][idx[mode]]); }
+  else if(e.key==="Enter" && e.target.classList.contains("blank")){ check(DATA[mode][idx[mode]]); }
+  else if((e.key==="Enter"||e.key===" ") && e.target.matches(".lines-pick .ln")){ e.preventDefault(); pickLine(e.target); }
+});
+
+function pickLine(el){
+  const ex = DATA[mode][idx[mode]], i = +el.dataset.i;
+  if(i===ex.bad){ el.classList.add("ok"); fb("ok","¡Correcto! El error está en la línea "+(i+1)+".", esc(ex.ex)); markSolved(); }
+  else { el.classList.add("no"); fb("no","Esa línea no es el problema.","La línea "+(i+1)+" es válida por sí sola. Probar con otra."); }
+}
+
+function check(ex){
+  if(mode==="predecir"){
+    const inp=$("ans"), raw=inp.value.trim();
+    if(!raw){ fb("hint","Falta la respuesta","Escribir un número."); return; }
+    const v = toNum(raw);
+    if(v!==null && ex.a.some(a=>Math.abs(a-v)<1e-9)){ fb("ok","¡Correcto!", esc(ex.ex)); markSolved(); }
+    else { fb("no","Todavía no.","Revisar los datos de las tablas paso a paso: primero el JOIN, después el WHERE, los grupos y por último el HAVING."); inp.classList.remove("shake"); void inp.offsetWidth; inp.classList.add("shake"); }
+  } else if(mode==="completar"){
+    let all=true, empty=false;
+    document.querySelectorAll(".blank").forEach(inp=>{
+      const v=inp.value.trim(); if(!v) empty=true;
+      const ok = ex.b[+inp.dataset.b].some(a=>sqlNorm(a)===sqlNorm(v));
+      inp.classList.toggle("ok",ok); inp.classList.toggle("no",!ok&&!!v); if(!ok) all=false;
+    });
+    if(all){ fb("ok","¡Correcto!", esc(ex.ex)); markSolved(); }
+    else fb(empty?"hint":"no", empty?"Faltan espacios por completar.":"Hay espacios incorrectos.", "Los espacios en rojo necesitan revisión. Los nombres de las columnas deben escribirse tal como están en la tabla.");
+  } else if(mode==="armar"){
+    const P=parsonsState, got=P.ans.map(x=>x.txt);
+    if(P.ans.length===0){ fb("hint","Todavía no hay líneas.","Hacer clic en las líneas disponibles para armar la consulta."); return; }
+    if(ex.sol.some(s=>s.length===got.length && s.every((t,j)=>t===got[j]))){ fb("ok","¡Correcto!", esc(ex.ex)); markSolved(); }
+    else {
+      const usedExtra = got.some(t=>ex.extra.includes(t));
+      fb("no","Todavía no.", usedExtra ? "Se usó una línea que sobra. Revisar cuál no corresponde a esta consulta." : got.length < ex.sol[0].length ? "Faltan líneas o el orden no es el correcto." : "El orden de las cláusulas no es el correcto. Revisar la anatomía de una consulta.");
+    }
+  }
+}
+
+/* reinicio */
+$("resetBtn").onclick=()=>{ $("resetConfirm").hidden=false; $("resetBtn").hidden=true; };
+$("resetNo").onclick=()=>{ $("resetConfirm").hidden=true; $("resetBtn").hidden=false; };
+$("resetYes").onclick=()=>{ solved={predecir:{},completar:{},error:{},armar:{}}; save(); $("resetConfirm").hidden=true; $("resetBtn").hidden=false; parsonsState=null; render(); };
+
+render();
+</script>
+</body></html>
